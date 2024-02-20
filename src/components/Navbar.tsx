@@ -1,13 +1,20 @@
-// src/components/Navbar.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import IconButton from "@mui/material/IconButton";
 import InputBase from "@mui/material/InputBase";
-import MenuIcon from "@mui/icons-material/Menu";
 import SearchIcon from "@mui/icons-material/Search";
-import { Box, styled, alpha, Typography } from "@mui/material";
+import {
+  Box,
+  styled,
+  alpha,
+  Typography,
+  MenuItem,
+  Menu,
+} from "@mui/material";
+import { AccountCircle } from "@mui/icons-material";
+import { useAuth } from "../provider/AuthProvider";
 
 const Search = styled("div")(({ theme }) => ({
   position: "relative",
@@ -52,8 +59,11 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const { isAuth, signOut } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+
+  // const userIsSignedIn = true;
 
   const handleOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
@@ -67,6 +77,23 @@ const Navbar = () => {
     }
   };
 
+  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    //Sign out API call and clear token in storage
+
+    setAnchorEl(null);
+  };
+
+  const handleSignOut = async () => {
+    const signedOutSuccess = await signOut();
+    if (signedOutSuccess) {
+      navigate("/");
+    }
+  };
+
   // const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
   //   e.preventDefault();
   //   navigate(`/app/search/${searchTerm}`);
@@ -74,13 +101,13 @@ const Navbar = () => {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static">
+      <AppBar position="static" sx={{ backgroundColor: "#000" }}>
         <Toolbar>
           <Typography
             variant="h6"
             noWrap
             component="div"
-            sx={{ flexGrow: 1, display: { xs: "none", sm: "block" } }}
+            sx={{ flexGrow: 3, display: { xs: "none", sm: "block" } }}
           >
             <span
               onClick={() => {
@@ -102,6 +129,37 @@ const Navbar = () => {
               inputProps={{ "aria-label": "search" }}
             />
           </Search>
+          {isAuth && (
+            <Box sx={{ marginLeft: "auto" }}>
+              <IconButton
+                size="large"
+                aria-label="account of current user"
+                aria-controls="menu-appbar"
+                aria-haspopup="true"
+                onClick={handleMenu}
+                color="inherit"
+              >
+                <AccountCircle />
+              </IconButton>
+              <Menu
+                id="menu-appbar"
+                anchorEl={anchorEl}
+                anchorOrigin={{
+                  vertical: "bottom",
+                  horizontal: "right",
+                }}
+                keepMounted
+                transformOrigin={{
+                  vertical: "top",
+                  horizontal: "right",
+                }}
+                open={Boolean(anchorEl)}
+                onClose={handleClose}
+              >
+                <MenuItem onClick={handleSignOut}>Log out</MenuItem>
+              </Menu>
+            </Box>
+          )}
         </Toolbar>
       </AppBar>
     </Box>

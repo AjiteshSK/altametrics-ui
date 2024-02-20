@@ -12,6 +12,9 @@ import {
   CircularProgress,
 } from "@mui/material";
 import UserReview from "./UserReview";
+import { generateCoverUrl } from "../helpers/generateCoverUrl";
+import { fetchAuthorNames } from "../helpers/fetchAuthorNames";
+import ErrorPage from "../pages/ErrorPage";
 
 interface BookData {
   title: string;
@@ -25,7 +28,7 @@ const BookPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { bib_key } = useParams();
+  const { bib_key, cover_key } = useParams();
 
   useEffect(() => {
     (async () => {
@@ -34,21 +37,17 @@ const BookPage: React.FC = () => {
 
       try {
         const response = await axios.get(
-          `https://openlibrary.org/isbn/${bib_key}.json`
+          `https://openlibrary.org/books/${bib_key}.json`
         );
         setBookData(response?.data);
-        setCover(
-          response?.data?.covers
-            ? `https://covers.openlibrary.org/b/id/${response?.data?.covers[0]}-L.jpg`
-            : "https://via.placeholder.com/150"
-        );
+        const coverURL = cover_key?.startsWith("OL")
+          ? generateCoverUrl(cover_key, "L")
+          : `https://covers.openlibrary.org/b/id/${cover_key}-L.jpg`;
+        setCover(coverURL);
 
         if (response?.data?.authors) {
-          const authorId = response?.data?.authors[0]?.key;
-          const authorData = await axios.get(
-            `https://openlibrary.org${authorId}.json`
-          );
-          setAuthor(authorData?.data?.name);
+          const authors = await fetchAuthorNames(response?.data?.authors);
+          setAuthor(authors);
         } else {
           setAuthor("Author information unavailable");
         }
@@ -73,7 +72,7 @@ const BookPage: React.FC = () => {
         <CircularProgress />
       </Box>
     );
-  if (error) return <Typography color="error">{error}</Typography>;
+  if (error) return <ErrorPage message={error} />;
 
   return (
     <Container maxWidth="lg" sx={{ marginTop: "20px" }}>
@@ -103,7 +102,6 @@ const BookPage: React.FC = () => {
               {author}
             </Typography>
             <UserReview bibKey={bib_key} />
-            {/* <UserActions bibKey={bib_key} /> */}
           </CardContent>
         </Grid>
       </Grid>

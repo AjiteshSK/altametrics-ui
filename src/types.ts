@@ -1,3 +1,5 @@
+import { AlertColor } from "@mui/material";
+
 export interface BookDetails {
   publishers?: string[];
   translated_from?: LanguageKey[];
@@ -59,6 +61,17 @@ export interface DateTime {
   value?: string;
 }
 
+export interface Review {
+  id: string;
+  user: string;
+  book: string;
+  rating: number;
+  review: string;
+  status: "want to read" | "read";
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BookType {
   bib_key: string;
   info_url: string;
@@ -71,7 +84,13 @@ export interface BookType {
 
 export interface SearchResult {
   title: string;
-  isbn: string[];
+  key: string;
   cover_edition_key: string;
   [key: string]: any;
+}
+
+export interface SnackbarState {
+  open: boolean;
+  message: string;
+  severity: AlertColor;
 }

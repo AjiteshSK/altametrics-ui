@@ -1,30 +1,40 @@
 import React, { useState } from "react";
-import {
-  Container,
-  TextField,
-  Button,
-  Typography,
-  Grid,
-  Link,
-} from "@mui/material";
-import axios from "axios";
+import { Container, TextField, Button, Typography, Grid } from "@mui/material";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../provider/AuthProvider";
 
 const SignIn = () => {
+  const navigate = useNavigate();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const [emailError, setEmailError] = useState(false);
+  const [passwordError, setPasswordError] = useState(false);
+
+  const validateEmail = (email: string) => {
+    const re =
+      /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@(([^<>()[\]\\.,;:\s@"]+\.)+[^<>()[\]\\.,;:\s@"]{2,})$/i;
+    return re.test(String(email).toLowerCase());
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const email = e.target.value;
+    setEmail(email);
+    setEmailError(!validateEmail(email));
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const password = e.target.value;
+    setPassword(password);
+    setPasswordError(password.length < 8);
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.log("Sign In:", { email, password });
-    // Here, you would usually send the data to your backend server for authentication
-    try {
-      const res = await axios.post("http://localhost:3000/user/sign-in", {
-        email,
-        password,
-      });
-      localStorage.setItem("token_ol", res.data.token);
-    } catch (error) {
-      console.log("Error while signing in", error);
+    const signInSuccess = await signIn(email, password);
+    if (!!signInSuccess) {
+      navigate("/app/dashboard");
     }
   };
 
@@ -56,7 +66,9 @@ const SignIn = () => {
                 name="email"
                 autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleEmailChange}
+                error={emailError}
+                helperText={emailError ? "Please enter a valid email." : ""}
               />
             </Grid>
             <Grid item xs={12}>
@@ -68,9 +80,13 @@ const SignIn = () => {
                 label="Password"
                 type="password"
                 id="password"
-                autoComplete="current-password"
+                autoComplete="new-password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handlePasswordChange}
+                error={passwordError}
+                helperText={
+                  passwordError ? "Password must be at least 8 characters." : ""
+                }
               />
             </Grid>
           </Grid>
@@ -85,9 +101,7 @@ const SignIn = () => {
           </Button>
           <Grid container justifyContent="flex-end">
             <Grid item>
-              <Link href="#" variant="body2">
-                Don't have an account? Sign Up
-              </Link>
+              <Link to={"/sign-up"}>Don't have an account? Sign Up</Link>
             </Grid>
           </Grid>
         </form>

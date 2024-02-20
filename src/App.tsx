@@ -1,10 +1,13 @@
 import { RouterProvider } from "react-router-dom";
+import { AuthProvider } from "./provider/AuthProvider";
 import { router } from "./router";
 
 const App = () => {
   return (
     <div id="app" className="App w-full">
-      <RouterProvider router={router} />
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
     </div>
   );
 };

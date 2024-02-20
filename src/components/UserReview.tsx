@@ -9,28 +9,45 @@ import {
   MenuItem,
   TextareaAutosize,
   Button,
+  Snackbar,
+  Alert,
+  SelectChangeEvent,
 } from "@mui/material";
+
 import Rating from "@mui/lab/Rating";
 import axios from "axios";
-const token = localStorage.getItem("token_ol");
-console.log("TOKEN", token);
-//axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+import { SnackbarState } from "../types";
+
 type IUserReviewProps = {
   bibKey: string | undefined;
 };
-//ONly import bib_key and make API call in here ? yes. store shit in localStorage
 
-const apiClient = axios.create({
-  baseURL: "http://localhost:3000",
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-});
 const UserReview = ({ bibKey }: IUserReviewProps) => {
+  const token = localStorage.getItem("token_ol");
+
+  const apiClient = axios.create({
+    baseURL: "http://localhost:3000",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
   const [status, setStatus] = useState("");
   const [isEditMode, setIsEditMode] = useState(false);
-  const [rating, setRating] = useState<number>(0); //set data in repsonse to api call
+  const [rating, setRating] = useState<number>(0);
   const [notes, setNotes] = useState<string>("");
+  const [snackbar, setSnackbar] = useState<SnackbarState>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  const showSnackbar = (message: string, severity: "success" | "error") => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
 
   useEffect(() => {
     (async () => {
@@ -38,21 +55,17 @@ const UserReview = ({ bibKey }: IUserReviewProps) => {
         const review = await apiClient.get(`/review/get-review/${bibKey}`);
         if (review?.data) {
           const { data } = review;
-          setRating(data.rating);
-          setNotes(data.review);
-          setStatus(status);
+          setRating(data?.rating);
+          setNotes(data?.review);
+          setStatus(data?.status);
         }
-
-        console.log("REV_RECEIVED", review);
       } catch (error) {
-        console.log("Error while fetching review", error);
+        console.log("REVIW NOT FOUND: ERROR", error);
       }
     })();
-  }, []);
+  }, [isEditMode]);
 
-  const handleOnStatusChange = (
-    event: React.ChangeEvent<{ value: unknown }>
-  ) => {
+  const handleOnStatusChange = (event: SelectChangeEvent<string>) => {
     const newStatus = event.target.value as string;
     if (newStatus !== "Read") {
       setRating(rating || 0);
@@ -77,21 +90,28 @@ const UserReview = ({ bibKey }: IUserReviewProps) => {
           const deletedReview = await apiClient.delete(
             `/review/delete-review/${bibKey}`
           );
+          if (deletedReview?.status === 200) {
+            showSnackbar("Review deleted successfully", "success");
+          }
           setIsEditMode(false);
         } else {
           const updatedReview = await apiClient.put("/review/update-review", {
-            isbn: bibKey,
+            book: bibKey,
             status: status.toLowerCase(),
             review: notes,
             rating,
           });
+          if (updatedReview?.status === 200) {
+            showSnackbar("Review updated successfully", "success");
+          }
         }
         setIsEditMode(false);
       } catch (error) {
-        console.log("Error while fetching review", error);
+        showSnackbar("Review update failed", "error");
       }
     })();
   };
+
   return (
     <>
       {isEditMode ? (
@@ -106,12 +126,11 @@ const UserReview = ({ bibKey }: IUserReviewProps) => {
             <InputLabel>Status</InputLabel>
             <Select
               value={status}
+              defaultValue={status}
               label="Status"
               onChange={handleOnStatusChange}
             >
-              <MenuItem value="None">
-                <em>None</em>
-              </MenuItem>
+              <MenuItem value="None">None</MenuItem>
               <MenuItem value="Read">Read</MenuItem>
               <MenuItem value="Want To Read">Want To Read</MenuItem>
             </Select>
@@ -127,7 +146,8 @@ const UserReview = ({ bibKey }: IUserReviewProps) => {
                     value={rating}
                     sx={{ marginBottom: "20px" }}
                     onChange={(event, newValue) => {
-                      setRating(newValue);
+                      console.log("EVENT", event);
+                      setRating(newValue as number);
                     }}
                     readOnly={!isEditMode}
                   />
@@ -152,7 +172,7 @@ const UserReview = ({ bibKey }: IUserReviewProps) => {
               </Button>
               <Button
                 variant="contained"
-                color="primary"
+                sx={{ backgroundColor: "#000" }}
                 onClick={handleOnSubmit}
               >
                 Save
@@ -162,16 +182,30 @@ const UserReview = ({ bibKey }: IUserReviewProps) => {
         </Box>
       ) : (
         <Paper elevation={3} sx={{ p: 2, mt: 2 }}>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <Rating name="read-only" value={rating} readOnly />
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <Rating name="read-only" value={rating} readOnly />
+              <Typography
+                variant="body2"
+                onClick={() => {
+                  setIsEditMode(true);
+                }}
+                sx={{ ml: 1, cursor: "pointer" }}
+              >
+                edit
+              </Typography>
+            </Box>
             <Typography
               variant="body2"
-              onClick={() => {
-                setIsEditMode(true);
-              }}
-              sx={{ ml: 1, cursor: "pointer" }}
+              sx={{ flexGrow: 1, textAlign: "right" }}
             >
-              edit
+              Status: {status || "Not in shelf"}
             </Typography>
           </Box>
           <Typography variant="body1" sx={{ mt: 2 }}>
@@ -179,6 +213,19 @@ const UserReview = ({ bibKey }: IUserReviewProps) => {
           </Typography>
         </Paper>
       )}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </>
   );
 };
